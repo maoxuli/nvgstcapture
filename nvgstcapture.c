@@ -3476,17 +3476,17 @@ create_csi_capture_pipeline (void)
 
   g_object_set (app->ele.camera, "message-forward", TRUE, NULL);
 
-#ifdef WITH_STREAMING
-  if (app->streaming_mode && app->video_streaming_ctx.streaming_src_file) {
-    /* Create capture chain elements */
-    if (!create_streaming_file_src_bin ()) {
-      NVGST_ERROR_MESSAGE ("cap bin creation failed \n");
-      goto fail;
-    }
-  } else {
-#else
+// #ifdef WITH_STREAMING
+//   if (app->streaming_mode && app->video_streaming_ctx.streaming_src_file) {
+//     /* Create capture chain elements */
+//     if (!create_streaming_file_src_bin ()) {
+//       NVGST_ERROR_MESSAGE ("cap bin creation failed \n");
+//       goto fail;
+//     }
+//   } else {
+// #else
   {
-#endif
+// #endif
     /* Create capture chain elements */
     if (!create_csi_cap_bin ()) {
       NVGST_ERROR_MESSAGE ("cap bin creation failed \n");
@@ -3500,80 +3500,80 @@ create_csi_capture_pipeline (void)
     goto fail;
   }
 
-  if (!create_img_enc_bin ()) {
-    NVGST_ERROR_MESSAGE ("encode bin creation failed \n");
-    goto fail;
-  }
+  // if (!create_img_enc_bin ()) {
+  //   NVGST_ERROR_MESSAGE ("encode bin creation failed \n");
+  //   goto fail;
+  // }
 
-  if (!create_video_snap_bin ()) {
-    NVGST_ERROR_MESSAGE ("video snapshot bin creation failed \n");
-    goto fail;
-  }
+  // if (!create_video_snap_bin ()) {
+  //   NVGST_ERROR_MESSAGE ("video snapshot bin creation failed \n");
+  //   goto fail;
+  // }
 
-#ifdef WITH_STREAMING
-  if (app->streaming_mode) {
-    if (!create_streaming_enc_bin ()) {
-      NVGST_ERROR_MESSAGE ("encode bin creation failed \n");
-      goto fail;
-    }
-  } else {
-#else
-  {
-#endif
-    /* Create preview chain elements */
-    if (!create_svs_bin ()) {
-      NVGST_ERROR_MESSAGE ("svs bin creation failed \n");
-      goto fail;
-    }
-  }
+// #ifdef WITH_STREAMING
+//   if (app->streaming_mode) {
+//     if (!create_streaming_enc_bin ()) {
+//       NVGST_ERROR_MESSAGE ("encode bin creation failed \n");
+//       goto fail;
+//     }
+//   } else {
+// #else
+  // {
+// #endif
+  //   /* Create preview chain elements */
+  //   if (!create_svs_bin ()) {
+  //     NVGST_ERROR_MESSAGE ("svs bin creation failed \n");
+  //     goto fail;
+  //   }
+  // }
 
-  /* Create preview scaling elements */
-  if (!create_preview_scaling_bin ()) {
-    NVGST_ERROR_MESSAGE ("preview scaling bin creation failed \n");
-    goto fail;
-  }
+  // /* Create preview scaling elements */
+  // if (!create_preview_scaling_bin ()) {
+  //   NVGST_ERROR_MESSAGE ("preview scaling bin creation failed \n");
+  //   goto fail;
+  // }
 
-  /* Create image scaling elements */
-  if (!create_image_scaling_bin ()) {
-    NVGST_ERROR_MESSAGE ("image scaling bin creation failed \n");
-    goto fail;
-  }
+  // /* Create image scaling elements */
+  // if (!create_image_scaling_bin ()) {
+  //   NVGST_ERROR_MESSAGE ("image scaling bin creation failed \n");
+  //   goto fail;
+  // }
 
-  /* Create video scaling elements */
-  if (!create_video_scaling_bin ()) {
-    NVGST_ERROR_MESSAGE ("video scaling bin creation failed \n");
-    goto fail;
-  }
+  // /* Create video scaling elements */
+  // if (!create_video_scaling_bin ()) {
+  //   NVGST_ERROR_MESSAGE ("video scaling bin creation failed \n");
+  //   goto fail;
+  // }
 
   /* Create capture tee for capture streams */
-  app->ele.cap_tee =
-      gst_element_factory_make ("nvtee" /*NVGST_PRIMARY_STREAM_SELECTOR */ ,
-      NULL);
-  if (!app->ele.cap_tee) {
-    NVGST_ERROR_MESSAGE ("capture nvtee creation failed \n");
-    goto fail;
-  }
+  // app->ele.cap_tee =
+  //     gst_element_factory_make ("nvtee" /*NVGST_PRIMARY_STREAM_SELECTOR */ ,
+  //     NULL);
+  // if (!app->ele.cap_tee) {
+  //   NVGST_ERROR_MESSAGE ("capture nvtee creation failed \n");
+  //   goto fail;
+  // }
 
-  g_object_set (G_OBJECT (app->ele.cap_tee), "name", "cam_t", NULL);
-  g_object_set (G_OBJECT (app->ele.cap_tee), "mode", app->mode, NULL);
+  // g_object_set (G_OBJECT (app->ele.cap_tee), "name", "cam_t", NULL);
+  // g_object_set (G_OBJECT (app->ele.cap_tee), "mode", app->mode, NULL);
 
-  /* Create preview & encode queue */
-  app->ele.prev_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
-  app->ele.ienc_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
-  app->ele.venc_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
-  app->ele.vsnap_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
-  if (!app->ele.prev_q || !app->ele.ienc_q || !app->ele.venc_q
-      || !app->ele.vsnap_q) {
-    NVGST_ERROR_MESSAGE ("preview/encode queue creation failed \n");
-    goto fail;
-  }
+  // /* Create preview & encode queue */
+  // app->ele.prev_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
+  // app->ele.ienc_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
+  // app->ele.venc_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
+  // app->ele.vsnap_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
+  // if (!app->ele.prev_q || !app->ele.ienc_q || !app->ele.venc_q
+  //     || !app->ele.vsnap_q) {
+  //   NVGST_ERROR_MESSAGE ("preview/encode queue creation failed \n");
+  //   goto fail;
+  // }
 
-  /* Add elements to camera pipeline */
-  gst_bin_add_many (GST_BIN (app->ele.camera),
-      app->ele.capbin, app->ele.vid_bin, app->ele.img_bin, app->ele.svsbin,
-      app->ele.svc_prebin, app->ele.svc_imgbin, app->ele.svc_vidbin,
-      app->ele.cap_tee, app->ele.prev_q, app->ele.ienc_q, app->ele.venc_q,
-      app->ele.vsnap_q, app->ele.vsnap_bin, NULL);
+  // /* Add elements to camera pipeline */
+  // gst_bin_add_many (GST_BIN (app->ele.camera),
+  //     app->ele.capbin, app->ele.vid_bin, app->ele.img_bin, app->ele.svsbin,
+  //     app->ele.svc_prebin, app->ele.svc_imgbin, app->ele.svc_vidbin,
+  //     app->ele.cap_tee, app->ele.prev_q, app->ele.ienc_q, app->ele.venc_q,
+  //     app->ele.vsnap_q, app->ele.vsnap_bin, NULL);
 
   /* Manually link the Tee with preview queue */
   srcpad = gst_element_get_static_pad (app->ele.cap_tee, "pre_src");
@@ -3592,6 +3592,11 @@ create_csi_capture_pipeline (void)
 
   gst_object_unref (sinkpad);
   gst_object_unref (srcpad);
+
+
+
+  // link the two 
+
 
   /* Manually link the queue with preview scaling bin */
   srcpad = gst_element_get_static_pad (app->ele.prev_q, "src");
