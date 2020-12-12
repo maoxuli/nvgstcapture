@@ -44,6 +44,7 @@ PKGS := gstreamer-1.0 \
 	gstreamer-pbutils-1.0 \
 	glib-2.0 x11 xext
 
+CC := g++
 CFLAGS += -fPIC
 LIBS += -ldl 
 

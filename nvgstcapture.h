@@ -24,7 +24,6 @@
 #define _NV_GST_CAPTURE_H_
 
 #include <gst/gst.h>
-#include <gst/video/videooverlay.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -35,55 +34,11 @@
 #include <sys/time.h>
 #include <math.h>
 
-#include <EGL/egl.h>
-#include <EGL/eglext.h>
+#include "mjpeg_server.h"
+// #include "gst/pbutils/pbutils.h"
+// #include "gst/pbutils/encoding-profile.h"
+// #include "gst/pbutils/encoding-target.h"
 
-#include "gst/pbutils/pbutils.h"
-#include "gst/pbutils/encoding-profile.h"
-#include "gst/pbutils/encoding-target.h"
-#include "nvgst_x11_common.h"
-
-#ifdef WITH_GUI
-
-#include "nvgstcapture_gui_interface.h"
-
-#else
-
-int dummy_func (void);
-int dummy_func ()
-{
-  return 0;
-}
-#define GUI 0
-#define CALL_GUI_FUNC(func, ...) dummy_func()
-#define GET_GUI_CTX() NULL
-
-#endif
-
-#define FUNCTION_START() \
-    time_t startTime = 0; \
-    struct timeval start_tv = {0, 0}; \
-    time_t endTime = 0; \
-    struct timeval end_tv = {0, 0}; \
-    if (gettimeofday(&start_tv, NULL) == 0) \
-        startTime = start_tv.tv_sec * 1000000 + start_tv.tv_usec; \
-    else \
-        startTime = 0;
-
-#define FUNCTION_END() \
-    if (gettimeofday(&end_tv, NULL) == 0) \
-        endTime = end_tv.tv_sec * 1000000 + end_tv.tv_usec; \
-    else \
-        endTime = 0; \
-    if (app->enableKpiProfile) \
-        g_print("\nKPI total time for %s in mS: %ld\n", \
-            __func__, ((endTime - startTime) / 1000));
-
-#define GET_TIMESTAMP(PLACE) \
-    if (gettimeofday(&app->timeStamp, NULL) == 0) \
-        app->timeStampStore[PLACE] = (app->timeStamp.tv_sec * 1000000) + app->timeStamp.tv_usec; \
-    else \
-        app->timeStampStore[PLACE] = 0;
 
 /* CAPTURE GENERIC */
 #define NVGST_DEFAULT_CAPTURE_MODE                CAPTURE_IMAGE
@@ -126,11 +81,7 @@ int dummy_func ()
 #define NVGST_DEFAULT_VIDEO_CONVERTER             "videoconvert"
 #define NVGST_DEFAULT_VIDEO_CONVERTER_CSI         "nvvidconv"
 #define NVGST_DEFAULT_VIDEO_SCALER                "videoscale"
-#ifdef WITH_GUI
-#define NVGST_DEFAULT_PREVIEW_SINK_CSI            "nveglglessink"
-#else
 #define NVGST_DEFAULT_PREVIEW_SINK_CSI            "nvoverlaysink"
-#endif
 #define NVGST_DEFAULT_PREVIEW_SINK_USB            "xvimagesink"
 #define NVGST_DEFAULT_CAPTURE_FILTER              "capsfilter"
 #define NVGST_DEFAULT_IMAGE_ENC                   "nvjpegenc"
@@ -155,10 +106,6 @@ int dummy_func ()
 #define NVGST_PRIMARY_STREAM_SELECTOR             "tee"
 #define NVGST_PRIMARY_QUEUE                       "queue"
 #define NVGST_PRIMARY_IDENTITY                    "identity"
-
-#ifdef WITH_STREAMING
-#define NVGST_STREAMING_SRC_FILE                  "uridecodebin"
-#endif
 
 /* CSI CAMERA DEFAULT PROPERTIES TUNING */
 
@@ -517,18 +464,20 @@ typedef struct
   GstElement *img_bin;
   GstElement *ienc;
   GstElement *fake_sink;
-} CameraBin; 
+} CamBin; 
+
+#define MAX_NUM_CAMS 2
 
 // GSTREAMER PIPELINE 
 typedef struct
 {
   GstElement *pipeline;
-  CameraBin cambins[MAX_NUM_CAMERAS]; 
+  CamBin cambins[MAX_NUM_CAMS]; 
 
   GstElement *file_bin;
   GstElement *muxer;
   GstElement *file_sink;
-} GstPipeline;
+} CamPipe;
 
 typedef struct 
 {
@@ -544,15 +493,14 @@ typedef struct
   guint sensor_id;
   guint sensor_mode;
   guint flip_method;
-} CameraSet; 
+} CamSet; 
 
-// CAMERA CONTEX PARAMS 
 typedef struct
 {
   gint return_value;
   
   guint num_cams; 
-  guint cam_ids[MAX_NUM_CAMS]
+  guint cam_ids[MAX_NUM_CAMS];
 
   gint file_type;
   gchar *file_name;
@@ -563,9 +511,9 @@ typedef struct
 
   CamRes capres;
   EncSet encset;
-  CameraSet camsets[MAX_NUM_CAMERAS]; 
+  CamSet camsets[MAX_NUM_CAMS]; 
 
-  GstPipeline pipeline;
+  CamPipe pipeline;
   gulong venc_probe_id;
   gulong ienc_probe_id;
 
