@@ -468,14 +468,9 @@ typedef enum
   HW_V4L2_ENC
 } HardwareEncoderType;
 
-/* CAMERA CAPTURE RESOLUTIONS */
+// CAMERA CAPTURE RESOLUTIONS 
 typedef struct
 {
-  gint preview_width;
-  gint preview_height;
-  gint cus_prev_width;
-  gint cus_prev_height;
-  gint prev_res_index;
   gint image_cap_width;
   gint image_cap_height;
   gint img_res_index;
@@ -485,104 +480,58 @@ typedef struct
   gint current_max_res;
 } CamRes;
 
-/* CAMERA ENCODER PARAMS */
+// CAMERA ENCODER PARAMS 
 typedef struct
 {
   gint image_enc;
   gint video_enc;
-  HardwareEncoderType hw_enc_type;
   guint bitrate;
   gboolean enabletwopassCBR;
   EncControlRateType controlrate;
   H264EncProfileType video_enc_profile;
 } EncSet;
 
-/* CAPTURE PIPELINE ELEMENTS */
-typedef struct
+// CAMERA PIPELINE 
+typedef struct 
 {
-  GstElement *camera;
+  GstElement *cap_bin;
   GstElement *vsrc;
-  GstElement *vsink;
-  GstElement *colorspace_conv;
   GstElement *cap_filter;
+
   GstElement *cap_tee;
-  GstElement *prev_q;
-  GstElement *ienc_q;
   GstElement *venc_q;
-  GstElement *vid_enc;
-  GstElement *img_enc;
-  GstElement *img_enc_conv;
-  GstElement *parser;
-  GstElement *muxer;
-  GstElement *img_sink;
-  GstElement *video_sink;
-  GstElement *capbin;
+  GstElement *ienc_q;
+
+  GstElement *vid_conv_bin;
+  GstElement *vconv;
+  GstElement *vconv_out_filter;
+
+  GstElement *img_conv_bin;
+  GstElement *iconv;
+  GstElement *iconv_out_filter;
+
   GstElement *vid_bin;
+  GstElement *venc;
+  GstElement *parser;
+
   GstElement *img_bin;
-  GstElement *svsbin;
-  GstElement *vid_enc_conv;
-  GstElement *vid_enc_cap_filter;
+  GstElement *ienc;
+  GstElement *fake_sink;
+} CameraBin; 
 
-  /* Elements for EGLStreamProducer */
-  GstElement *eglproducer_pipeline;
-  GstElement *eglproducer_bin;
-  GstElement *eglproducer_videosink;
-  GstElement *eglproducer_nvvideosink;
-  GstElement *eglproducer_videotestsrc;
-  GstElement *eglproducer_capsfilter;
-  GstElement *eglproducer_videoconvert;
-
-  /* Scaling elements for preview, image and video */
-  GstElement *svc_prebin;
-  GstElement *svc_prevconv;
-  GstElement *svc_prevconv_out_filter;
-  GstElement *svc_imgbin;
-  GstElement *svc_imgvconv;
-  GstElement *svc_imgvconv_out_filter;
-  GstElement *svc_vidbin;
-  GstElement *svc_vidvconv;
-  GstElement *svc_vidvconv_out_filter;
-
-  /* Elements for video snapshot */
-  GstElement *vsnap_q;
-  GstElement *vsnap_bin;
-  GstElement *vsnap_enc;
-  GstElement *vsnap_sink;
-  GstElement *svc_snapconv;
-  GstElement *svc_snapconv_out_filter;
-} CamPipe;
-
-#ifdef WITH_STREAMING
+// GSTREAMER PIPELINE 
 typedef struct
 {
-  GObject *media_factory;
-  GstElement *appsrc;
-  GstElement *streaming_file_src_conv;
-  gchar *streaming_src_file;
-} RTSPStreamingCtx;
-#endif
+  GstElement *pipeline;
+  CameraBin cambins[MAX_NUM_CAMERAS]; 
 
-/* EGLStream Producer ID */
-typedef enum
+  GstElement *file_bin;
+  GstElement *muxer;
+  GstElement *file_sink;
+} GstPipeline;
+
+typedef struct 
 {
-  EGLSTREAM_PRODUCER_ID_SCF_CAMERA = 0,
-  EGLSTREAM_PRODUCER_ID_MAX,
-} EGLStream_Producer_ID;
-
-/* CAMERA CONTEX PARAMS */
-typedef struct
-{
-  gint mode;
-  gint file_type;
-  gint capture_count;
-  gint return_value;
-  gint capcount;
-  gint color_format;
-  gint color_format_csi;
-  gint color_format_v4l2;
-  gboolean muxer_is_identity;
-
-  /*CSI camera features */
   gint whitebalance;
   gint ae_antibanding;
   gint tnr_mode;
@@ -595,81 +544,32 @@ typedef struct
   guint sensor_id;
   guint sensor_mode;
   guint flip_method;
-  guint display_id;
-  guint overlay_index;
-  guint overlay_x_pos;
-  guint overlay_y_pos;
-  guint overlay_width;
-  guint overlay_height;
+} CameraSet; 
 
-  GstPadProbeReturn native_record;
+// CAMERA CONTEX PARAMS 
+typedef struct
+{
+  gint return_value;
+  
+  guint num_cams; 
+  guint cam_ids[MAX_NUM_CAMS]
 
-  gchar *svs;
+  gint file_type;
   gchar *file_name;
-  gchar *csi_options_argus;
-  gchar *csi_resolution;
-  gchar *usb_options;
-  gchar *encoder_options;
-  gchar *vidcap_device;
-  gchar *cap_dev_node;
-  gchar *overlayConfig;
-  gchar *eglConfig;
-  gchar *exposure_timerange;
-  gchar *gain_range;
-  gchar *isp_digital_gainrange;
-
-  NvCamSrcType cam_src;
-  gboolean cap_success;
-  gboolean use_cus_res;
-  gboolean use_eglstream;
-
-  gboolean first_frame;
-  time_t timeStampStore[KPI_EVENT_SIZE];
-  struct timeval timeStamp;
-  gboolean enableKpiProfile;
-  gboolean enableKpiNumbers;
-  gboolean enableMeta;
-  gboolean enableAeLock;
-  gboolean enableAwbLock;
-  gulong prev_probe_id;
-  gulong enc_probe_id;
-  time_t currentFrameTime;
-  time_t prevFrameTime;
-  gulong frameCount;
-  time_t accumulator;
-  time_t currentEncFrameTime;
-  time_t prevEncFrameTime;
-  gulong encFrameCount;
-  time_t encAccumulator;
 
   GMutex *lock;
   GCond *cond;
-  GCond *x_cond;
   GThread *reset_thread;
-  GThread *x_event_thread;
 
   CamRes capres;
   EncSet encset;
-  CamPipe ele;
-  displayCtx disp;
+  CameraSet camsets[MAX_NUM_CAMERAS]; 
 
-  /* EGLStream */
-  EGLStream_Producer_ID eglstream_producer_id;
-  EGLDisplay display;
-  EGLStreamKHR stream;
+  GstPipeline pipeline;
+  gulong venc_probe_id;
+  gulong ienc_probe_id;
 
-  /* EGLStream Producer */
-  guint fifosize;
-  gboolean enable_fifo;
-
-  /* AUTOMATION */
-  Automate aut;
-
-#ifdef WITH_STREAMING
-  gint streaming_mode;
-  RTSPStreamingCtx video_streaming_ctx;
-#endif
-} CamCtx;
+  mjpeg_server *stream_server; 
+} AppCtx;
 
 #endif
-
