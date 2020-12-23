@@ -30,7 +30,7 @@ LDFLAGS :=
 
 APP := nvgstcapture
 
-SRCS := $(wildcard *.c)
+SRCS := $(wildcard *.cpp)
 
 GST_INSTALL_DIR ?= /usr/lib/aarch64-linux-gnu/gstreamer-1.0/
 LIB_INSTALL_DIR ?= /usr/lib/aarch64-linux-gnu/tegra/
@@ -45,7 +45,7 @@ PKGS := gstreamer-1.0 \
 	glib-2.0 x11 xext
 
 CC := g++
-CFLAGS += -fPIC
+CFLAGS += -fPIC -fpermissive 
 LIBS += -ldl 
 
 CFLAGS += `pkg-config --cflags $(PKGS)`
