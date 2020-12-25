@@ -100,7 +100,7 @@
 #define NVGST_PRIMARY_MP4_MUXER                   "qtmux"
 #define NVGST_PRIMARY_3GP_MUXER                   "3gppmux"
 #define NVGST_PRIMARY_MKV_MUXER                   "matroskamux"
-#define NVGST_PRIMARY_STREAM_SELECTOR             "tee"
+#define NVGST_PRIMARY_STREAM_SELECTOR             "nvtee"
 #define NVGST_PRIMARY_QUEUE                       "queue"
 #define NVGST_PRIMARY_IDENTITY                    "identity"
 
@@ -152,107 +152,92 @@
 #define MIN_CSI_RES                               PR_1280x720
 #define MAX_CSI_RES                               PR_4032x3040
 
-// /* DEBUG LOG LEVEL */
-// #ifdef NVGST_LOG_LEVEL_DEBUG
-// #define NVGST_ENTER_FUNCTION()            g_print("%s{", __FUNCTION__)
-// #define NVGST_EXIT_FUNCTION()             g_print("%s}", __FUNCTION__)
-// #define NVGST_EXIT_FUNCTION_VIA(s)        g_print("%s}['%s']", __FUNCTION__, s)
-// #define NVGST_DEBUG_MESSAGE(s)            g_debug("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_DEBUG_MESSAGE_V(s, ...)     g_debug("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
-// #define NVGST_INFO_MESSAGE(s)             g_message("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_INFO_MESSAGE_V(s, ...)      g_message("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
-// #define NVGST_WARNING_MESSAGE(s)          g_warning("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_WARNING_MESSAGE_V(s, ...)   g_warning("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
-// #define NVGST_CRITICAL_MESSAGE(s)         do {\
-//                                           g_critical("<%s:%d> "s, __FUNCTION__, __LINE__);\
-//                                           app->return_value = -1;\
-//                                           } while (0)
-// #define NVGST_CRITICAL_MESSAGE_V(s, ...)  do {\
-//                                           g_critical("<%s:%d> "s, __FUNCTION__, __LINE__,__VA_ARGS__);\
-//                                           app->return_value = -1;\
-//                                           } while (0)
-// #define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> "s, __FUNCTION__, __LINE__,__VA_ARGS__)
+// DEBUG LOG LEVEL 
+#ifdef NVGST_LOG_LEVEL_DEBUG
+#define NVGST_ENTER_FUNCTION()            g_print("%s{", __FUNCTION__)
+#define NVGST_EXIT_FUNCTION()             g_print("%s}", __FUNCTION__)
+#define NVGST_EXIT_FUNCTION_VIA(s)        g_print("%s}['%s']", __FUNCTION__, s)
+#define NVGST_DEBUG_MESSAGE(s)            g_debug("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_DEBUG_MESSAGE_V(s, ...)     g_debug("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define NVGST_INFO_MESSAGE(s)             g_message("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_INFO_MESSAGE_V(s, ...)      g_message("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define NVGST_WARNING_MESSAGE(s)          g_warning("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_WARNING_MESSAGE_V(s, ...)   g_warning("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define NVGST_CRITICAL_MESSAGE(s)         do {\
+                                          g_critical("<%s:%d> " s, __FUNCTION__, __LINE__);\
+                                          app->return_value = -1;\
+                                          } while (0)
+#define NVGST_CRITICAL_MESSAGE_V(s, ...)  do {\
+                                          g_critical("<%s:%d> " s, __FUNCTION__, __LINE__,__VA_ARGS__);\
+                                          app->return_value = -1;\
+                                          } while (0)
+#define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> " s, __FUNCTION__, __LINE__,__VA_ARGS__)
 
-// #elif defined NVGST_LOG_LEVEL_INFO
-// #define NVGST_ENTER_FUNCTION()            G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_EXIT_FUNCTION()             G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_EXIT_FUNCTION_VIA(s)        G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_DEBUG_MESSAGE(s)            G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_DEBUG_MESSAGE_V(s, ...)     G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_INFO_MESSAGE(s)             g_message("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_INFO_MESSAGE_V(s, ...)      g_message("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
-// #define NVGST_WARNING_MESSAGE(s)          g_warning("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_WARNING_MESSAGE_V(s, ...)   g_warning("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
-// #define NVGST_CRITICAL_MESSAGE(s)         do {\
-//                                           g_critical("<%s:%d> "s, __FUNCTION__, __LINE__);\
-//                                           app->return_value = -1;\
-//                                           } while (0)
-// #define NVGST_CRITICAL_MESSAGE_V(s, ...)  do {\
-//                                           g_critical("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__);\
-//                                           app->return_value = -1;\
-//                                           } while (0)
-// #define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#elif defined NVGST_LOG_LEVEL_INFO
+#define NVGST_ENTER_FUNCTION()            G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_EXIT_FUNCTION()             G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_EXIT_FUNCTION_VIA(s)        G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_DEBUG_MESSAGE(s)            G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_DEBUG_MESSAGE_V(s, ...)     G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_INFO_MESSAGE(s)             g_message("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_INFO_MESSAGE_V(s, ...)      g_message("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define NVGST_WARNING_MESSAGE(s)          g_warning("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_WARNING_MESSAGE_V(s, ...)   g_warning("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define NVGST_CRITICAL_MESSAGE(s)         do {\
+                                          g_critical("<%s:%d> " s, __FUNCTION__, __LINE__);\
+                                          app->return_value = -1;\
+                                          } while (0)
+#define NVGST_CRITICAL_MESSAGE_V(s, ...)  do {\
+                                          g_critical("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__);\
+                                          app->return_value = -1;\
+                                          } while (0)
+#define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
 
-// #elif defined NVGST_LOG_LEVEL_WARNING
-// #define NVGST_ENTER_FUNCTION()            G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_EXIT_FUNCTION()             G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_EXIT_FUNCTION_VIA(s)        G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_DEBUG_MESSAGE(s)            G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_DEBUG_MESSAGE_V(s, ...)     G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_INFO_MESSAGE(s)             G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_INFO_MESSAGE_V(s, ...)      G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_WARNING_MESSAGE(s)          g_warning("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_WARNING_MESSAGE_V(s, ...)   g_warning("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
-// #define NVGST_CRITICAL_MESSAGE(s)         do {\
-//                                           g_critical("<%s:%d> "s, __FUNCTION__, __LINE__);\
-//                                           app->return_value = -1;\
-//                                           } while (0)
-// #define NVGST_CRITICAL_MESSAGE_V(s, ...)  do {\
-//                                           g_critical("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__);\
-//                                           app->return_value = -1;\
-//                                           } while (0)
-// #define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#elif defined NVGST_LOG_LEVEL_WARNING
+#define NVGST_ENTER_FUNCTION()            G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_EXIT_FUNCTION()             G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_EXIT_FUNCTION_VIA(s)        G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_DEBUG_MESSAGE(s)            G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_DEBUG_MESSAGE_V(s, ...)     G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_INFO_MESSAGE(s)             G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_INFO_MESSAGE_V(s, ...)      G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_WARNING_MESSAGE(s)          g_warning("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_WARNING_MESSAGE_V(s, ...)   g_warning("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#define NVGST_CRITICAL_MESSAGE(s)         do {\
+                                          g_critical("<%s:%d> " s, __FUNCTION__, __LINE__);\
+                                          app->return_value = -1;\
+                                          } while (0)
+#define NVGST_CRITICAL_MESSAGE_V(s, ...)  do {\
+                                          g_critical("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__);\
+                                          app->return_value = -1;\
+                                          } while (0)
+#define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
 
-// #elif defined NVGST_LOG_LEVEL_CRITICAL
-// #define NVGST_ENTER_FUNCTION()            G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_EXIT_FUNCTION()             G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_EXIT_FUNCTION_VIA(s)        G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_DEBUG_MESSAGE(s)            G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_DEBUG_MESSAGE_V(s, ...)     G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_INFO_MESSAGE(s)             G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_INFO_MESSAGE_V(s, ...)      G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_WARNING_MESSAGE(s)          G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_WARNING_MESSAGE_V(s, ...)   G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_CRITICAL_MESSAGE(s)         do {\
-//                                           g_critical("<%s:%d> "s, __FUNCTION__, __LINE__);\
-//                                           app->return_value = -1;\
-//                                           } while (0)
-// #define NVGST_CRITICAL_MESSAGE_V(s, ...)  do {\
-//                                           g_critical("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__);\
-//                                           app->return_value = -1;\
-//                                           } while (0)
-// #define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#elif defined NVGST_LOG_LEVEL_CRITICAL
+#define NVGST_ENTER_FUNCTION()            G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_EXIT_FUNCTION()             G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_EXIT_FUNCTION_VIA(s)        G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_DEBUG_MESSAGE(s)            G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_DEBUG_MESSAGE_V(s, ...)     G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_INFO_MESSAGE(s)             G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_INFO_MESSAGE_V(s, ...)      G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_WARNING_MESSAGE(s)          G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_WARNING_MESSAGE_V(s, ...)   G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_CRITICAL_MESSAGE(s)         do {\
+                                          g_critical("<%s:%d> " s, __FUNCTION__, __LINE__);\
+                                          app->return_value = -1;\
+                                          } while (0)
+#define NVGST_CRITICAL_MESSAGE_V(s, ...)  do {\
+                                          g_critical("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__);\
+                                          app->return_value = -1;\
+                                          } while (0)
+#define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
 
-// #else
-// #define NVGST_ENTER_FUNCTION()            G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_EXIT_FUNCTION()             G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_EXIT_FUNCTION_VIA(s)        G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_DEBUG_MESSAGE(s)            G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_DEBUG_MESSAGE_V(s, ...)     G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_INFO_MESSAGE(s)             G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_INFO_MESSAGE_V(s, ...)      G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_WARNING_MESSAGE(s)          G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_WARNING_MESSAGE_V(s, ...)   G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_CRITICAL_MESSAGE(s)         G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_CRITICAL_MESSAGE_V(s, ...)  G_STMT_START{ (void)0; }G_STMT_END
-// #define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> "s, __FUNCTION__, __LINE__)
-// #define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> "s, __FUNCTION__, __LINE__, __VA_ARGS__)
-// #endif
-
+#else
 #define NVGST_ENTER_FUNCTION()            G_STMT_START{ (void)0; }G_STMT_END
 #define NVGST_EXIT_FUNCTION()             G_STMT_START{ (void)0; }G_STMT_END
 #define NVGST_EXIT_FUNCTION_VIA(s)        G_STMT_START{ (void)0; }G_STMT_END
@@ -264,8 +249,9 @@
 #define NVGST_WARNING_MESSAGE_V(s, ...)   G_STMT_START{ (void)0; }G_STMT_END
 #define NVGST_CRITICAL_MESSAGE(s)         G_STMT_START{ (void)0; }G_STMT_END
 #define NVGST_CRITICAL_MESSAGE_V(s, ...)  G_STMT_START{ (void)0; }G_STMT_END
-#define NVGST_ERROR_MESSAGE(s)            G_STMT_START{ (void)0; }G_STMT_END
-#define NVGST_ERROR_MESSAGE_V(s, ...)     G_STMT_START{ (void)0; }G_STMT_END
+#define NVGST_ERROR_MESSAGE(s)            g_error("<%s:%d> " s, __FUNCTION__, __LINE__)
+#define NVGST_ERROR_MESSAGE_V(s, ...)     g_error("<%s:%d> " s, __FUNCTION__, __LINE__, __VA_ARGS__)
+#endif
 
 #define INVALID_SELECTION_ARGUS                    "Not a valid option for ARGUS Plugin\n"
 
@@ -436,7 +422,6 @@ typedef struct
   gint video_cap_width;
   gint video_cap_height;
   gint vid_res_index;
-  gint current_max_res;
 } CamRes;
 
 // CAMERA ENCODER PARAMS 
@@ -453,6 +438,8 @@ typedef struct
 // CAMERA PIPELINE 
 typedef struct 
 {
+  GstElement *cam_bin; 
+
   GstElement *cap_bin;
   GstElement *vsrc;
   GstElement *cap_filter;
@@ -489,10 +476,15 @@ typedef struct
   GstElement *vid_sink_bin;
   GstElement *muxer;
   GstElement *file_sink;
-} CapPipe;
+} GstPipe;
 
 typedef struct 
 {
+  guint cam_index; 
+  guint sensor_id;
+  guint sensor_mode;
+  guint flip_method;
+
   gint whitebalance;
   gint ae_antibanding;
   gint tnr_mode;
@@ -503,9 +495,7 @@ typedef struct
   gfloat exposure_compensation;
   gfloat tnr_strength;
   gfloat ee_strength;
-  guint sensor_id;
-  guint sensor_mode;
-  guint flip_method;
+
 
   gboolean enableAeLock;
   gboolean enableAwbLock;
@@ -521,7 +511,6 @@ typedef struct
   gint return_value;
   
   guint num_cams; 
-  guint cam_ids[MAX_NUM_CAMS];
 
   gint file_type;
   gchar *file_name;
@@ -534,11 +523,13 @@ typedef struct
   EncSet encset;
   CamSet camsets[MAX_NUM_CAMS]; 
 
-  CapPipe cap;
+  GstPipe gst;
   gulong venc_probe_id;
   gulong ienc_probe_id;
 
-  mjpeg_server *stream_server; 
+  guint capcount_0; 
+
+  std::shared_ptr<mjpeg_server> stream_server; 
 } AppCtx;
 
 #endif

@@ -104,7 +104,7 @@ static gint video_capture_height[] = { HEIGHT_RES };
 // initialize capture parameters 
 static void capture_init_params()
 {
-    NVGST_INFO_MESSAGE("Set intial params"); 
+    app->num_cams = MAX_NUM_CAMS; 
     // app->lock = malloc(sizeof(*(app->lock)));
     // g_mutex_init (app->lock);
     // app->cond = malloc(sizeof(*(app->cond)));
@@ -113,44 +113,45 @@ static void capture_init_params()
     // app->file_type = NVGST_DEFAULT_FILE_TYPE;
     // app->file_name = g_strdup (NVGST_DEFAULT_FILENAME);
 
-    // // default capture resolutions
-    // int video_capres = VR_1920x1080; 
-    // int image_capres = IR_1280x720; 
-    // app->capres.video_cap_width = video_capture_width[video_capres];
-    // app->capres.video_cap_height = video_capture_height[video_capres];
-    // app->capres.vid_res_index = video_capres;
-    // app->capres.image_cap_width = image_capture_width[image_capres];
-    // app->capres.image_cap_height = image_capture_height[image_capres];
-    // app->capres.img_res_index = image_capres;
+    // default capture resolutions
+    int video_capres = VR_1920x1080; 
+    int image_capres = IR_1280x720; 
+    app->capres.video_cap_width = video_capture_width[video_capres];
+    app->capres.video_cap_height = video_capture_height[video_capres];
+    app->capres.vid_res_index = video_capres;
+    app->capres.image_cap_width = image_capture_width[image_capres];
+    app->capres.image_cap_height = image_capture_height[image_capres];
+    app->capres.img_res_index = image_capres;
 
-    // // default encoding settings 
-    // app->encset.image_enc = NVGST_DEFAULT_IMAGE_ENCODER;
-    // app->encset.video_enc = NVGST_DEFAULT_VIDEO_ENCODER;
+    // default encoding settings 
+    app->encset.image_enc = NVGST_DEFAULT_IMAGE_ENCODER;
+    app->encset.video_enc = NVGST_DEFAULT_VIDEO_ENCODER;
     // set_encoder_bitrate (NVGST_DEFAULT_480P_ENCODER_BITRATE);
     // set_encoder_profile (NVGST_DEFAULT_VIDEO_ENCODER_PROFILE);
-    // app->encset.controlrate = NVGST_DEFAULT_VIDEO_ENCODER_CONTROLRATE;
-    // app->encset.enabletwopassCBR = NVGST_DEFAULT_VIDEO_ENCODER_TWOPASSCBR;
+    app->encset.controlrate = NVGST_DEFAULT_VIDEO_ENCODER_CONTROLRATE;
+    app->encset.enabletwopassCBR = NVGST_DEFAULT_VIDEO_ENCODER_TWOPASSCBR;
 
-    // for (int i = 0; i < app->num_cameras; i++) {
-    //     CamSet& camset = app->camsets[i];
-    //     camset.flip_method = NVGST_DEFAULT_FLIP_METHOD;
-    //     camset->whitebalance = NVGST_DEFAULT_WHITEBALANCE;
-    //     camset->saturation = NVGST_DEFAULT_SATURATION;
-    //     camset->sensor_id = NVGST_DEFAULT_SENSOR_ID;
-    //     camset->sensor_mode = NVGST_DEFAULT_SENSOR_MODE;
-    //     camset->display_id = NVGST_DEFAULT_DISPLAY_ID;
-    //     camset->exposure_timerange = NULL;
-    //     camset->gain_range = NULL;
-    //     camset->isp_digital_gainrange = NULL;
-    //     camset->enableAeLock = FALSE;
-    //     camset->enableAwbLock = FALSE;
-    //     camset->exposure_compensation = NVGST_DEFAULT_EXPOSURE_COMPENSATION;
-    //     camset->ae_antibanding = NVGST_DEFAULT_AEANTIBANDING;
-    //     camset->tnr_mode = NVGST_DEFAULT_TNR_MODE;
-    //     camset->ee_mode = NVGST_DEFAULT_EE_MODE;
-    //     camset->ee_strength = NVGST_DEFAULT_EE_STRENGTH;
-    //     camset->tnr_strength = NVGST_DEFAULT_TNR_STRENGTH;
-    // }
+    for (int i = 0; i < app->num_cams; i++) {
+        CamSet& camset = app->camsets[i];
+        camset.cam_index = i; 
+        camset.sensor_id = i; 
+        camset.flip_method = NVGST_DEFAULT_FLIP_METHOD;
+        // camset->whitebalance = NVGST_DEFAULT_WHITEBALANCE;
+        // camset->saturation = NVGST_DEFAULT_SATURATION;
+        // camset->sensor_mode = NVGST_DEFAULT_SENSOR_MODE;
+        // camset->display_id = NVGST_DEFAULT_DISPLAY_ID;
+        // camset->exposure_timerange = NULL;
+        // camset->gain_range = NULL;
+        // camset->isp_digital_gainrange = NULL;
+        // camset->enableAeLock = FALSE;
+        // camset->enableAwbLock = FALSE;
+        // camset->exposure_compensation = NVGST_DEFAULT_EXPOSURE_COMPENSATION;
+        // camset->ae_antibanding = NVGST_DEFAULT_AEANTIBANDING;
+        // camset->tnr_mode = NVGST_DEFAULT_TNR_MODE;
+        // camset->ee_mode = NVGST_DEFAULT_EE_MODE;
+        // camset->ee_strength = NVGST_DEFAULT_EE_STRENGTH;
+        // camset->tnr_strength = NVGST_DEFAULT_TNR_STRENGTH;
+    }
 }
 
 
@@ -159,8 +160,8 @@ static gboolean check_for_interrupt (gpointer data)
   if (cintr) {
     cintr = FALSE;
 
-    gst_element_post_message (GST_ELEMENT (app->cap.pipeline),
-        gst_message_new_application (GST_OBJECT (app->cap.pipeline),
+    gst_element_post_message (GST_ELEMENT (app->gst.pipeline),
+        gst_message_new_application (GST_OBJECT (app->gst.pipeline),
             gst_structure_new ("NvGstAppInterrupt",
                 "message", G_TYPE_STRING, "Pipeline interrupted", NULL)));
 
@@ -182,7 +183,6 @@ static void _intr_handler (int signum)
 
 static void _intr_setup (void)
 {
-    NVGST_INFO_MESSAGE("Setup interruption"); 
     struct sigaction action;
     memset (&action, 0, sizeof (action));
     action.sa_handler = _intr_handler;
@@ -502,8 +502,8 @@ static bool set_encoder_bitrate (guint bitrate)
     }
 
     for (int i = 0; i < app->num_cams; i++) {
-        if (app->cap.cams[i].venc)
-            g_object_set(G_OBJECT(app->cap.cams[i].venc), "bitrate", bitrate, NULL);
+        if (app->gst.cams[i].venc)
+            g_object_set(G_OBJECT(app->gst.cams[i].venc), "bitrate", bitrate, NULL);
     }
 
     app->encset.bitrate = bitrate;
@@ -542,8 +542,8 @@ static bool set_encoder_profile (H264EncProfileType profile)
     }
 
     for (int i = 0; i < app->num_cams; i++) {
-        if (app->cap.cams[i].venc) 
-            g_object_set(G_OBJECT(app->cap.cams[i].venc), "profile", profile_id, NULL);
+        if (app->gst.cams[i].venc) 
+            g_object_set(G_OBJECT(app->gst.cams[i].venc), "profile", profile_id, NULL);
     }
 
     app->encset.video_enc_profile = profile;
@@ -587,19 +587,22 @@ static gboolean get_image_encoder (GstElement ** iencoder)
 {
     switch (app->encset.image_enc) {
         case FORMAT_JPEG_SW:
+            NVGST_INFO_MESSAGE("create software JPEG encoder"); 
             *iencoder = gst_element_factory_make (NVGST_SW_IMAGE_ENC, NULL);
             break;
         case FORMAT_JPEG_HW:
+            NVGST_INFO_MESSAGE("create hardware JPEG encoder"); 
             *iencoder = gst_element_factory_make (NVGST_DEFAULT_IMAGE_ENC, NULL);
             break;
         default:
+            NVGST_INFO_MESSAGE("create hardware JPEG encoder as default"); 
             *iencoder = gst_element_factory_make (NVGST_DEFAULT_IMAGE_ENC, NULL);
             break;
     }
 
     if (!(*iencoder)) {
         app->return_value = -1;
-        NVGST_ERROR_MESSAGE ("Can't Create image encoder element");
+        NVGST_ERROR_MESSAGE ("Can't create image encoder element");
         return FALSE;
     }
 
@@ -649,49 +652,57 @@ static gboolean get_video_encoder (GstElement ** vencoder)
 // create parser based on encset.video_enc 
 static gboolean get_parser (GstElement ** parser)
 {
-  switch (app->encset.video_enc) {
-    case FORMAT_H264_HW:
-      *parser = gst_element_factory_make (NVGST_PRIMARY_H264_PARSER, NULL);
-      break;
-    case FORMAT_H265_HW:
-      *parser = gst_element_factory_make (NVGST_PRIMARY_H265_PARSER, NULL);
-      break;
-    default:
-      *parser = gst_element_factory_make (NVGST_PRIMARY_IDENTITY, NULL);
-      break;
-  }
-  return TRUE;
+    switch (app->encset.video_enc) {
+        case FORMAT_H264_HW:
+            NVGST_INFO_MESSAGE("create parser for H264 encoder"); 
+            *parser = gst_element_factory_make (NVGST_PRIMARY_H264_PARSER, NULL);
+            break;
+        case FORMAT_H265_HW:
+            NVGST_INFO_MESSAGE("create parser for H265 encoder"); 
+            *parser = gst_element_factory_make (NVGST_PRIMARY_H265_PARSER, NULL);
+            break;
+        default:
+            NVGST_INFO_MESSAGE("create identity parser as default"); 
+            *parser = gst_element_factory_make (NVGST_PRIMARY_IDENTITY, NULL);
+            break;
+    }
+    return TRUE;
 }
 
 
 static gboolean get_muxer (GstElement ** muxer)
 {
     if (app->encset.video_enc == FORMAT_VP9_HW) {
+        NVGST_INFO_MESSAGE("create mux for VP9 encoder"); 
         if (app->file_type != FILE_MKV) {
             NVGST_WARNING_MESSAGE
                 ("VP9 is only supported format with MKV in current GST version. "
-                "Selecting MKV as container\n");
+                "Set MKV as container\n");
             app->file_type = FILE_MKV;
         }
     }
 
     app->muxer_is_identity = FALSE;
-
     switch (app->file_type) {
         case FILE_MP4:
+            NVGST_INFO_MESSAGE("create mux for MP4 file"); 
             *muxer = gst_element_factory_make (NVGST_PRIMARY_MP4_MUXER, NULL);
             break;
         case FILE_3GP:
+            NVGST_INFO_MESSAGE("create mux for 3GP file"); 
             *muxer = gst_element_factory_make (NVGST_PRIMARY_3GP_MUXER, NULL);
             break;
         case FILE_MKV:
+            NVGST_INFO_MESSAGE("create mux for MKV file"); 
             *muxer = gst_element_factory_make (NVGST_PRIMARY_MKV_MUXER, NULL);
             break;
         case FILE_H265:
+            NVGST_INFO_MESSAGE("create mux for H265 file"); 
             *muxer = gst_element_factory_make (NVGST_PRIMARY_IDENTITY, NULL);
             app->muxer_is_identity = TRUE;
             break;
         default:
+            NVGST_INFO_MESSAGE("create mux for MP4 file as default"); 
             *muxer = gst_element_factory_make (NVGST_PRIMARY_MP4_MUXER, NULL);
             break;
     }
@@ -752,47 +763,49 @@ static gboolean create_csi_cap_bin(gint index)
 
     assert(index < app->num_cams); 
     CamSet& camset = app->camsets[index]; 
-    CamPipe& campipe = app->cap.cams[index]; 
+    CamPipe& campipe = app->gst.cams[index]; 
 
+    NVGST_INFO_MESSAGE_V("create capture %d", index); 
     campipe.vsrc = gst_element_factory_make (NVGST_VIDEO_CAPTURE_SRC_CSI_ARGUS, NULL);
     if (!campipe.vsrc) {
-        NVGST_ERROR_MESSAGE_V ("Element camera capture creation failed (%d)", index);
+        NVGST_ERROR_MESSAGE_V ("Element capture creation failed (%d)", index);
         goto fail;
     }
 
     // CSI camera properties tuning 
-    g_object_set (G_OBJECT (campipe.vsrc), "wbmode", camset.whitebalance, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "timeout", camset.timeout, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "saturation", camset.saturation, NULL);
+    NVGST_INFO_MESSAGE_V("set capture params for camera %d", index); 
     g_object_set (G_OBJECT (campipe.vsrc), "sensor-id", camset.sensor_id, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "sensor-mode", camset.sensor_mode, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "aelock", camset.enableAeLock, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "awblock", camset.enableAwbLock, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "exposurecompensation", camset.exposure_compensation, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "aeantibanding", camset.ae_antibanding, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "tnr-mode", camset.tnr_mode , NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "ee-mode", camset.ee_mode , NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "tnr-strength", camset.tnr_strength, NULL);
-    g_object_set (G_OBJECT (campipe.vsrc), "ee-strength", camset.ee_strength, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "wbmode", camset.whitebalance, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "timeout", camset.timeout, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "saturation", camset.saturation, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "aelock", camset.enableAeLock, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "awblock", camset.enableAwbLock, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "exposurecompensation", camset.exposure_compensation, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "aeantibanding", camset.ae_antibanding, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "tnr-mode", camset.tnr_mode , NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "ee-mode", camset.ee_mode , NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "tnr-strength", camset.tnr_strength, NULL);
+    // g_object_set (G_OBJECT (campipe.vsrc), "ee-strength", camset.ee_strength, NULL);
 
-    if (camset.exposure_timerange != NULL)
-      g_object_set (G_OBJECT (campipe.vsrc), "exposuretimerange", camset.exposure_timerange, NULL);
+    // if (camset.exposure_timerange != NULL)
+    //   g_object_set (G_OBJECT (campipe.vsrc), "exposuretimerange", camset.exposure_timerange, NULL);
 
-    if (camset.gain_range != NULL)
-      g_object_set (G_OBJECT (campipe.vsrc), "gainrange", camset.gain_range, NULL);
+    // if (camset.gain_range != NULL)
+    //   g_object_set (G_OBJECT (campipe.vsrc), "gainrange", camset.gain_range, NULL);
 
-    if (camset.isp_digital_gainrange != NULL)
-      g_object_set (G_OBJECT (campipe.vsrc), "ispdigitalgainrange", camset.isp_digital_gainrange, NULL);
+    // if (camset.isp_digital_gainrange != NULL)
+    //   g_object_set (G_OBJECT (campipe.vsrc), "ispdigitalgainrange", camset.isp_digital_gainrange, NULL);
 
     // caps 
+    NVGST_INFO_MESSAGE_V("create capture caps filter for camera %d", index); 
     campipe.cap_filter = gst_element_factory_make (NVGST_DEFAULT_CAPTURE_FILTER, NULL);
     if (!campipe.cap_filter) {
         NVGST_ERROR_MESSAGE_V ("Element cpature filter creation failed (%d)", index);
         goto fail;
     }
 
-    // app->capres.current_max_res = MAX (app->capres.vid_res_index,  app->capres.img_res_index);
-    // get_max_resolution (app->capres.current_max_res, &width, &height);
+    width = app->capres.video_cap_width; 
+    height = app->capres.video_cap_height; 
     caps = gst_caps_new_simple ("video/x-raw", "format", G_TYPE_STRING, "NV12",
             "width", G_TYPE_INT, width, "height", G_TYPE_INT, height, "framerate",
             GST_TYPE_FRACTION, NVGST_DEFAULT_CAPTURE_FPS, 1, NULL);
@@ -800,17 +813,22 @@ static gboolean create_csi_cap_bin(gint index)
     feature = gst_caps_features_new ("memory:NVMM", NULL);
     gst_caps_set_features (caps, 0, feature);
 
+    NVGST_INFO_MESSAGE_V("set capture caps for camera %d", index); 
+    NVGST_INFO_MESSAGE_V("%s", gst_caps_to_string(caps)); 
     g_object_set (campipe.cap_filter, "caps", caps, NULL);
     gst_caps_unref (caps);
 
+    NVGST_INFO_MESSAGE_V("create capture bin for camera %d", index); 
     campipe.cap_bin = gst_bin_new ("cap_bin");
     gst_bin_add_many (GST_BIN (campipe.cap_bin), campipe.vsrc, campipe.cap_filter, NULL);
-    if (gst_element_link (campipe.vsrc, campipe.cap_filter) != TRUE) 
-    {
+
+    NVGST_INFO_MESSAGE_V("link capture and caps filter for camera %d", index); 
+    if (!gst_element_link (campipe.vsrc, campipe.cap_filter)) {
         NVGST_ERROR_MESSAGE_V ("Link failed for elements camera capture & capture filter (%d)", index);
         goto fail;
     }
 
+    NVGST_INFO_MESSAGE_V("create ghost pad for camera %d", index); 
     pad = gst_element_get_static_pad (campipe.cap_filter, "src");
     if (!pad) {
         NVGST_ERROR_MESSAGE_V ("can't get static src pad of capture filter (%d)", index);
@@ -833,15 +851,17 @@ static gboolean create_vid_conv_bin (gint index)
     GstCapsFeatures *feature = NULL;
 
     assert(index < app->num_cams); 
-    CamPipe& campipe = app->cap.cams[index]; 
+    CamPipe& campipe = app->gst.cams[index]; 
 
-    campipe.vconv = gst_element_factory_make (NVGST_DEFAULT_VIDEO_CONVERTER, NULL);
+    NVGST_INFO_MESSAGE_V("create video convert for camera %d", index); 
+    campipe.vconv = gst_element_factory_make (NVGST_DEFAULT_VIDEO_CONVERTER_CSI, NULL);
     if (!campipe.vconv) {
         NVGST_ERROR_MESSAGE_V ("Element video convert creation failed (%d)", index);
         goto fail;
     }
     g_object_set (campipe.vconv, "flip-method", app->camsets[index].flip_method, NULL);
 
+    NVGST_INFO_MESSAGE_V("create video convert caps filter for camera %d", index); 
     campipe.vconv_out_filter = gst_element_factory_make (NVGST_DEFAULT_CAPTURE_FILTER, NULL);
     if (!campipe.vconv_out_filter) {
         NVGST_ERROR_MESSAGE_V ("Element video convert filter creation failed (%d)", index);
@@ -856,17 +876,22 @@ static gboolean create_vid_conv_bin (gint index)
     feature = gst_caps_features_new ("memory:NVMM", NULL);
     gst_caps_set_features (caps, 0, feature);
 
+    NVGST_INFO_MESSAGE_V("set video convert caps filter for camera %d", index); 
+    NVGST_INFO_MESSAGE_V("%s", gst_caps_to_string(caps)); 
     g_object_set (campipe.vconv_out_filter, "caps", caps, NULL);
     gst_caps_unref (caps);
 
+    NVGST_INFO_MESSAGE_V("create video convert bin for camera %d", index);
     campipe.vid_conv_bin = gst_bin_new ("vid_conv_bin");
     gst_bin_add_many (GST_BIN (campipe.vid_conv_bin), campipe.vconv, campipe.vconv_out_filter, NULL);
-    if (!gst_element_link_many (campipe.vconv, campipe.vconv_out_filter, NULL)) 
-    {
+
+    NVGST_INFO_MESSAGE_V("link video convert to caps filter for camera %d", index);
+    if (!gst_element_link_many (campipe.vconv, campipe.vconv_out_filter, NULL)) {
         NVGST_ERROR_MESSAGE_V ("Link failed for elements video convert & convert filter (%d)", index);
         goto fail;
     }
 
+    NVGST_INFO_MESSAGE_V("create ghost sink pad for video convert bin for camera %d", index);
     pad = gst_element_get_static_pad (campipe.vconv, "sink");
     if (!pad) {
         NVGST_ERROR_MESSAGE_V ("can't get static sink pad of video convert (%d)", index);
@@ -875,7 +900,7 @@ static gboolean create_vid_conv_bin (gint index)
     gst_element_add_pad (campipe.vid_conv_bin, gst_ghost_pad_new ("sink", pad));
     gst_object_unref (GST_OBJECT (pad));
 
-
+    NVGST_INFO_MESSAGE_V("create ghost src pad for video convert bin for camera %d", index);
     pad = gst_element_get_static_pad (campipe.vconv_out_filter, "src");
     if (!pad) {
         NVGST_ERROR_MESSAGE_V ("can't get static src pad of video convert filter (%d)", index);
@@ -898,26 +923,31 @@ static gboolean create_vid_enc_bin(gint index)
     GstPad *pad = NULL;
 
     assert(index < app->num_cams); 
-    CamPipe& campipe = app->cap.cams[index]; 
+    CamPipe& campipe = app->gst.cams[index]; 
 
+    NVGST_INFO_MESSAGE_V("create video encode for camera %d", index); 
     if (!get_video_encoder (&campipe.venc)) {
         NVGST_ERROR_MESSAGE_V ("Video encoder element could not be created (%d)", index);
         goto fail;
     }
 
+    NVGST_INFO_MESSAGE_V("create video encode parser for camera %d", index);
     if (!get_parser (&campipe.parser)) {
         NVGST_ERROR_MESSAGE_V ("Video parser element could not be created (%d)", index);
         goto fail;
     }
 
+    NVGST_INFO_MESSAGE_V("create video encode bin for camera %d", index);
     campipe.vid_enc_bin = gst_bin_new ("vid_enc_bin");
     gst_bin_add_many (GST_BIN (campipe.vid_enc_bin), campipe.venc, campipe.parser, NULL);
 
+    NVGST_INFO_MESSAGE_V("link video encode and parser for camera %d", index);
     if ((gst_element_link (campipe.venc, campipe.parser)) != TRUE) {
         NVGST_ERROR_MESSAGE_V ("Elements could not link video encoder & parser (%d)", index);
         goto fail;
     }
 
+    NVGST_INFO_MESSAGE_V("create ghost sink pad for video encode bin for camera %d", index);
     pad = gst_element_get_static_pad (campipe.venc, "sink");
     if (!pad) {
         NVGST_ERROR_MESSAGE_V ("can't get static sink pad of video encoder (%d)", index);
@@ -926,6 +956,7 @@ static gboolean create_vid_enc_bin(gint index)
     gst_element_add_pad (campipe.vid_enc_bin, gst_ghost_pad_new ("sink", pad));
     gst_object_unref (GST_OBJECT (pad));
 
+    NVGST_INFO_MESSAGE_V("create ghost src pad for video encode bin for camera %d", index);
     pad = gst_element_get_static_pad (campipe.parser, "src");
     if (!pad) {
         NVGST_ERROR_MESSAGE_V ("can't get static src pad of parser (%d)", index);
@@ -946,37 +977,47 @@ fail:
 static gboolean create_vid_sink_bin()
 {
     GstPad *pad = NULL;
+    gchar sink_x[64]; 
 
-    if (!get_muxer (&app->cap.muxer)) {
+    NVGST_INFO_MESSAGE("create muxer"); 
+    if (!get_muxer (&app->gst.muxer)) {
         NVGST_ERROR_MESSAGE ("Video muxer element could not be created.");
         goto fail;
     }
 
-    app->cap.file_sink = gst_element_factory_make (NVGST_DEFAULT_FILE_SINK, NULL);
-    if (!app->cap.file_sink) {
+    NVGST_INFO_MESSAGE("create file sink"); 
+    app->gst.file_sink = gst_element_factory_make (NVGST_DEFAULT_FILE_SINK, NULL);
+    if (!app->gst.file_sink) {
         NVGST_ERROR_MESSAGE ("File sink element could not be created.");
         goto fail;
     }
-    g_object_set (G_OBJECT (app->cap.file_sink),
+    NVGST_INFO_MESSAGE_V("set file location to: %s", DEFAULT_FILE_LOCATION); 
+    g_object_set (G_OBJECT (app->gst.file_sink),
         "location", DEFAULT_FILE_LOCATION, "async", FALSE, "sync", FALSE, NULL);
 
-    app->cap.vid_sink_bin = gst_bin_new ("vid_sink_bin");
-    gst_bin_add_many (GST_BIN (app->cap.vid_sink_bin), 
-        app->cap.muxer, app->cap.file_sink, NULL);
+    NVGST_INFO_MESSAGE("create video sink bin"); 
+    app->gst.vid_sink_bin = gst_bin_new ("vid_sink_bin");
+    gst_bin_add_many (GST_BIN (app->gst.vid_sink_bin), 
+        app->gst.muxer, app->gst.file_sink, NULL);
 
-    if ((gst_element_link (app->cap.muxer, app->cap.file_sink)) != TRUE) {
+    NVGST_INFO_MESSAGE("link muxer to file sink"); 
+    if ((gst_element_link (app->gst.muxer, app->gst.file_sink)) != TRUE) {
         NVGST_ERROR_MESSAGE ("Elements could not link muxer & file_sink\n");
         goto fail;
     }
 
-    pad = gst_element_get_request_pad (app->cap.muxer, "sink_%u");
-    if (!pad) {
-        NVGST_ERROR_MESSAGE ("can't get request sink pad of muxer");
-        goto fail;
+    
+    for (int index = 0; index < app->num_cams; index++) {
+        g_snprintf (sink_x, sizeof (sink_x), "video_%d", index);
+        NVGST_INFO_MESSAGE_V("create ghost %s pad for video sink bin", sink_x); 
+        pad = gst_element_get_request_pad (app->gst.muxer, sink_x);
+        if (!pad) {
+            NVGST_ERROR_MESSAGE_V ("can't get request %s pad of muxer", sink_x);
+            goto fail;
+        }
+        gst_element_add_pad (app->gst.vid_sink_bin, gst_ghost_pad_new (sink_x, pad));
+        gst_object_unref (GST_OBJECT (pad));
     }
-
-    gst_element_add_pad (app->cap.vid_sink_bin, gst_ghost_pad_new ("sink_%u", pad));
-    gst_object_unref (GST_OBJECT (pad));
 
     return TRUE;
 
@@ -994,16 +1035,17 @@ static gboolean create_img_conv_bin (gint index)
     GstCapsFeatures *feature = NULL;
 
     assert(index < app->num_cams); 
-    CamPipe& campipe = app->cap.cams[index];
+    CamPipe& campipe = app->gst.cams[index];
    
-    campipe.iconv = gst_element_factory_make (NVGST_DEFAULT_VIDEO_CONVERTER, NULL);
+    NVGST_INFO_MESSAGE_V("create image convert %d", index); 
+    campipe.iconv = gst_element_factory_make (NVGST_DEFAULT_VIDEO_CONVERTER_CSI, NULL);
     if (!campipe.iconv) {
         NVGST_ERROR_MESSAGE_V ("Element image convert creation failed (%d)", index);
         goto fail;
     }
-
     g_object_set (campipe.iconv, "flip-method", app->camsets[index].flip_method, NULL);
 
+    NVGST_INFO_MESSAGE_V("create image convert caps filter %d", index); 
     campipe.iconv_out_filter = gst_element_factory_make (NVGST_DEFAULT_CAPTURE_FILTER, NULL);
     if (!campipe.iconv_out_filter) {
         NVGST_ERROR_MESSAGE_V ("Element image convert filter creation failed (%d)", index);
@@ -1018,29 +1060,34 @@ static gboolean create_img_conv_bin (gint index)
     feature = gst_caps_features_new ("memory:NVMM", NULL);
     gst_caps_set_features (caps, 0, feature);
 
+    NVGST_INFO_MESSAGE_V("set image convert caps filter %d", index); 
+    NVGST_INFO_MESSAGE_V("%s", gst_caps_to_string(caps)); 
     g_object_set (campipe.iconv_out_filter, "caps", caps, NULL);
     gst_caps_unref (caps);
 
+    NVGST_INFO_MESSAGE_V("create image convert bin %d", index); 
     campipe.img_conv_bin = gst_bin_new ("img_conv_bin");
     gst_bin_add_many (GST_BIN (campipe.img_conv_bin), campipe.iconv, campipe.iconv_out_filter, NULL);
-    if (!gst_element_link_many (campipe.iconv, campipe.iconv_out_filter, NULL)) 
-    {
+
+    NVGST_INFO_MESSAGE_V("link image convert & caps filter  %d", index); 
+    if (!gst_element_link_many (campipe.iconv, campipe.iconv_out_filter, NULL)) {
         NVGST_ERROR_MESSAGE_V ("Element link failed between image convert & convert filter (%d)", index);
         goto fail;
     }
 
+    NVGST_INFO_MESSAGE_V("create ghost sink pad for image convert %d", index); 
     pad = gst_element_get_static_pad (campipe.iconv, "sink");
     if (!pad) {
-        NVGST_ERROR_MESSAGE_V ("can't get static sink pad of image convert (%d)", index);
+        NVGST_ERROR_MESSAGE_V ("can't get static sink pad of image convert %d", index);
         goto fail;
     }
     gst_element_add_pad (campipe.img_conv_bin, gst_ghost_pad_new ("sink", pad));
     gst_object_unref (GST_OBJECT (pad));
 
-
+    NVGST_INFO_MESSAGE_V("create ghost src pad for image convert %d", index); 
     pad = gst_element_get_static_pad (campipe.iconv_out_filter, "src");
     if (!pad) {
-        NVGST_ERROR_MESSAGE_V ("can't get static src pad of image convert filter (%d)", index);
+        NVGST_ERROR_MESSAGE_V ("can't get static src pad of image convert filter %d", index);
         goto fail;
     }
     gst_element_add_pad (campipe.img_conv_bin, gst_ghost_pad_new ("src", pad));
@@ -1063,49 +1110,19 @@ fail:
   **/
 static void cam_image_captured (GstElement * fsink, GstBuffer * buffer, GstPad * pad, gpointer udata)
 {
-  GstMapInfo info;
-  if (gst_buffer_map (buffer, &info, GST_MAP_READ)) 
-  {
-    if (info.size > 0) {
-      // FILE *fp = NULL;
-      // gchar outfile[100];
-      // gchar temp[100];
-      // memset (outfile, 0, sizeof (outfile));
-      // memset (temp, 0, sizeof (temp));
+    int index = *(guint*)udata; 
+    NVGST_INFO_MESSAGE_V("image captured: %d", index); 
 
-      // strncat (outfile, app->file_name, sizeof(outfile) - 1);
-      // sprintf (outfile + strlen(outfile), "_%ld", (long) getpid());
-      // sprintf (temp, "_s%02d_%05d.jpg", app->sensor_id, app->capture_count++);
-      // strcat (outfile, temp);
-
-      // fp = fopen (outfile, "wb");
-      // if (fp == NULL) {
-      //   g_print ("Can't open file for Image Capture!\n");
-      //   app->cap_success = FALSE;
-      // } 
-      // else {
-      //   if (info.size != fwrite (info.data, 1, info.size, fp)) {
-      //     g_print ("Can't write data in file, No Space left on Device!\n");
-      //     app->cap_success = FALSE;
-      //     fclose (fp);
-      //     if (remove (outfile) != 0)
-      //       g_print ("Unable to delete the file\n");
-      //   } 
-      //   else {
-      //     app->cap_success = TRUE;
-      //     fclose (fp);
-      //   }
-      // }
-      // app->capcount++;
-      assert(app->stream_server); 
-      int index = *(guint*)udata; 
-      app->stream_server->update_image(info.data, info.size, index); 
-      gst_buffer_unmap (buffer, &info);
-    } 
-    else {
-      NVGST_WARNING_MESSAGE ("image buffer probe failed\n");
+    GstMapInfo info;
+    if (!gst_buffer_map (buffer, &info, GST_MAP_READ)) {
+        NVGST_WARNING_MESSAGE("failed map buffer"); 
+        return; 
     }
-  }
+
+    assert(app->stream_server); 
+    app->stream_server->update_image(info.data, info.size, index); 
+           
+    gst_buffer_unmap (buffer, &info);
 }
 
 // create image bin 
@@ -1114,29 +1131,35 @@ static gboolean create_img_enc_bin (int index)
 {
     GstPad *pad = NULL;
     assert(index < app->num_cams); 
-    CamPipe& campipe = app->cap.cams[index]; 
+    CamPipe& campipe = app->gst.cams[index]; 
 
+    NVGST_INFO_MESSAGE_V("create image encoder for camera %d", index); 
     if (!get_image_encoder (&campipe.ienc)) {
         NVGST_ERROR_MESSAGE_V ("Image encoder element could not be created (%d)", index);
         goto fail;
     }
 
+    NVGST_INFO_MESSAGE_V("create image sink for camera %d", index); 
     campipe.fake_sink = gst_element_factory_make (NVGST_DEFAULT_IENC_SINK, NULL);
     if (!campipe.fake_sink) {
         NVGST_ERROR_MESSAGE_V ("Image fake sink element could be created (%d)", index);
         goto fail;
     }
     g_object_set (G_OBJECT (campipe.fake_sink), "signal-handoffs", TRUE, NULL);
-    g_signal_connect (G_OBJECT (campipe.fake_sink), "handoff", G_CALLBACK (cam_image_captured), (void*)&app->cam_ids[index]);
+    g_signal_connect (G_OBJECT (campipe.fake_sink), "handoff", 
+        G_CALLBACK (cam_image_captured), (void*)&app->camsets[index].cam_index);
 
+    NVGST_INFO_MESSAGE_V("create image encode bin for camera %d", index); 
     campipe.img_enc_bin = gst_bin_new ("img_enc_bin");
     gst_bin_add_many (GST_BIN (campipe.img_enc_bin), campipe.ienc, campipe.fake_sink, NULL);
 
+    NVGST_INFO_MESSAGE_V("link image encoder and fake sink for camera %d", index); 
     if ((gst_element_link (campipe.ienc, campipe.fake_sink)) != TRUE) {
         NVGST_ERROR_MESSAGE_V ("Elements could not link image encoder & fake_sink (%d)", index);
         goto fail;
     }
 
+    NVGST_INFO_MESSAGE_V("create ghost sink for image encode bin for camera %d", index); 
     pad = gst_element_get_static_pad (campipe.ienc, "sink");
     if (!pad) {
         NVGST_ERROR_MESSAGE_V ("can't get static sink pad of image encoder (%d)", index);
@@ -1164,7 +1187,7 @@ static GstBusSyncReply bus_sync_handler (GstBus * bus, GstMessage * msg, gpointe
     switch (GST_MESSAGE_TYPE (msg)) 
     {
         case GST_MESSAGE_ELEMENT:
-            if (GST_MESSAGE_SRC (msg) == GST_OBJECT (app->cap.pipeline)) {
+            if (GST_MESSAGE_SRC (msg) == GST_OBJECT (app->gst.pipeline)) {
                 const GstStructure *structure;
                 structure = gst_message_get_structure (msg);
                 if (gst_structure_has_name (structure, "video-done")) {
@@ -1177,7 +1200,7 @@ static GstBusSyncReply bus_sync_handler (GstBus * bus, GstMessage * msg, gpointe
                         if (G_VALUE_TYPE (val) == GST_TYPE_MESSAGE) {
                             child_msg = (GstMessage *) g_value_get_boxed (val);
                             if (GST_MESSAGE_TYPE (child_msg) == GST_MESSAGE_EOS &&
-                                GST_MESSAGE_SRC (child_msg) == GST_OBJECT (app->cap.vid_sink_bin))
+                                GST_MESSAGE_SRC (child_msg) == GST_OBJECT (app->gst.vid_sink_bin))
                             {
                                 // if (app->reset_thread)
                                 // g_thread_unref (app->reset_thread);
@@ -1228,7 +1251,7 @@ static gboolean bus_callback (GstBus * bus, GstMessage * msg, gpointer data)
                 gst_element_state_get_name (old), gst_element_state_get_name (new_state),
                 gst_element_state_get_name (pending));
 
-            if (GST_MESSAGE_SRC (msg) == GST_OBJECT (app->cap.pipeline)
+            if (GST_MESSAGE_SRC (msg) == GST_OBJECT (app->gst.pipeline)
                 && pending == GST_STATE_VOID_PENDING && old == GST_STATE_PAUSED
                 && new_state == GST_STATE_PLAYING) {
             }
@@ -1260,6 +1283,186 @@ static gboolean bus_callback (GstBus * bus, GstMessage * msg, gpointer data)
     return TRUE;
 }
 
+static gboolean create_csi_cam_bin(int index)
+{
+    GstPad *srcpad = NULL;
+    GstPad *sinkpad = NULL;
+    gchar name_x[64];
+
+    assert(index < app->num_cams); 
+    CamPipe& campipe = app->gst.cams[index]; 
+
+    // Create csi capture chain elements 
+    NVGST_INFO_MESSAGE_V("create csi capture bin %d", index);
+    if (!create_csi_cap_bin(index)) {
+        NVGST_ERROR_MESSAGE_V ("cap bin %d creation failed", index);
+        goto fail;
+    }
+
+    // Create video encode chain elements 
+    NVGST_INFO_MESSAGE_V("create video encode bin %d", index);
+    if (!create_vid_enc_bin(index)) {
+        NVGST_ERROR_MESSAGE_V ("video encode bin %d creation failed", index);
+        goto fail;
+    }
+
+    // Create image encode chain elements 
+    NVGST_INFO_MESSAGE_V("create image encode bin %d", index);
+    if (!create_img_enc_bin(index)) {
+        NVGST_ERROR_MESSAGE_V ("image encode bin %d creation failed", index);
+        goto fail;
+    }
+
+    // Create video scaling elements 
+    NVGST_INFO_MESSAGE_V("create video convert bin %d", index);
+    if (!create_vid_conv_bin(index)) {
+        NVGST_ERROR_MESSAGE_V ("video conv bin %d creation failed", index);
+        goto fail;
+    }
+
+    // Create image scaling elements 
+    NVGST_INFO_MESSAGE_V("create image convert bin %d", index);
+    if (!create_img_conv_bin(index)) {
+        NVGST_ERROR_MESSAGE_V ("image conv bin %d creation failed", index);
+        goto fail;
+    }
+
+    // Create capture tee for capture streams 
+    NVGST_INFO_MESSAGE_V("create capture tee %d", index);
+    campipe.cap_tee = gst_element_factory_make (NVGST_PRIMARY_STREAM_SELECTOR, NULL);
+    if (!campipe.cap_tee) {
+        NVGST_ERROR_MESSAGE_V ("capture tee %d creation failed", index);
+        goto fail;
+    }
+
+    g_object_set (G_OBJECT (campipe.cap_tee), "name", "cam_t", NULL);
+    g_object_set (G_OBJECT (campipe.cap_tee), "mode", 2, NULL);
+
+    // Create encode queues 
+    NVGST_INFO_MESSAGE_V("create encode queues for camera %d", index);
+    campipe.venc_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
+    campipe.ienc_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
+    if (!campipe.venc_q || !campipe.ienc_q) {
+        NVGST_ERROR_MESSAGE_V ("encode queues %d creation failed", index);
+        goto fail;
+    }
+
+    // Add elements to camera pipeline 
+    g_snprintf(name_x, sizeof (name_x), "cam_bin_%d", index);
+    campipe.cam_bin = gst_bin_new (name_x);
+    gst_bin_add_many (GST_BIN (campipe.cam_bin), campipe.cap_bin, campipe.cap_tee, 
+            campipe.venc_q, campipe.vid_conv_bin, campipe.vid_enc_bin, 
+            campipe.ienc_q, campipe.img_conv_bin, campipe.img_enc_bin, 
+            NULL);
+
+    // Manually link the Tee with video queue 
+    NVGST_INFO_MESSAGE_V("link tee & video encode queue %d", index);
+    srcpad = gst_element_get_static_pad (campipe.cap_tee, "vid_src");
+    sinkpad = gst_element_get_static_pad (campipe.venc_q, "sink");
+    if (!sinkpad || !srcpad) {
+        NVGST_ERROR_MESSAGE ("fail to get pads from tee & venc_q");
+        goto fail;
+    }
+    if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
+        NVGST_ERROR_MESSAGE ("fail to link tee & venc_q");
+        goto fail;
+    }
+
+    // probe on venc pipeline 
+    NVGST_INFO_MESSAGE_V("set video encode probe %d", index);
+    app->venc_probe_id = gst_pad_add_probe (sinkpad, GST_PAD_PROBE_TYPE_BUFFER, 
+                            venc_buf_prob, (void*)&app->camsets[index].cam_index, NULL);
+    gst_object_unref (sinkpad);
+    gst_object_unref (srcpad);
+
+    // Manually link the video queue with video scaling 
+    NVGST_INFO_MESSAGE_V("link video encode queue & video convert %d", index);
+    srcpad = gst_element_get_static_pad (campipe.venc_q, "src");
+    sinkpad = gst_element_get_static_pad (campipe.vid_conv_bin, "sink");
+    if (!sinkpad || !srcpad) {
+        NVGST_ERROR_MESSAGE ("fail to get pads from video queue & video conv");
+        goto fail;
+    }
+    if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
+        NVGST_ERROR_MESSAGE ("fail to link video queue & video conv");
+        goto fail;
+    }
+    gst_object_unref (sinkpad);
+    gst_object_unref (srcpad);
+
+    // Manually link the Tee with image queue 
+    NVGST_INFO_MESSAGE_V("link tee & image encode queue %d", index);
+    srcpad = gst_element_get_static_pad (campipe.cap_tee, "pre_src");
+    sinkpad = gst_element_get_static_pad (campipe.ienc_q, "sink");
+    if (!sinkpad || !srcpad) {
+        NVGST_ERROR_MESSAGE ("fail to get pads from tee & ienc_q");
+        goto fail;
+    }
+    if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
+        NVGST_ERROR_MESSAGE ("fail to link tee & ienc_q");
+        goto fail;
+    }
+    
+    // probe on ienc pipeline 
+    NVGST_INFO_MESSAGE_V("set image encode probe %d", index);
+    app->ienc_probe_id = gst_pad_add_probe (sinkpad, GST_PAD_PROBE_TYPE_BUFFER, 
+                            ienc_buf_prob, (void*)&app->camsets[index].cam_index, NULL);
+    gst_object_unref (sinkpad);
+    gst_object_unref (srcpad);
+
+    // Manually link the image queue with image scaling 
+    NVGST_INFO_MESSAGE_V("link image encode queue & image convert %d", index);
+    srcpad = gst_element_get_static_pad (campipe.ienc_q, "src");
+    sinkpad = gst_element_get_static_pad (campipe.img_conv_bin, "sink");
+    if (!sinkpad || !srcpad) {
+        NVGST_ERROR_MESSAGE ("fail to get pads from image queue & image conv");
+        goto fail;
+    }
+    if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
+        NVGST_ERROR_MESSAGE ("fail to link image queue & image conv");
+        goto fail;
+    }
+    gst_object_unref (sinkpad);
+    gst_object_unref (srcpad);
+
+    // link the capture bin with Tee 
+    NVGST_INFO_MESSAGE_V("link capture bin & tee %d", index);
+    if (!gst_element_link (campipe.cap_bin, campipe.cap_tee)) {
+        NVGST_ERROR_MESSAGE ("fail to link capture bin & tee");
+        goto fail;
+    }
+
+    // link the video scaling bin with encode bin 
+    NVGST_INFO_MESSAGE_V("link video convert bin & video encode bin %d", index);
+    if (!gst_element_link (campipe.vid_conv_bin, campipe.vid_enc_bin)) {
+        NVGST_ERROR_MESSAGE ("fail to link vid_conv_bin & vid_enc_bin");
+        goto fail;
+    }
+
+    // link the image scaling bin with encode bin 
+    NVGST_INFO_MESSAGE_V("link image convert bin & image encode bin %d", index);
+    if (!gst_element_link (campipe.img_conv_bin, campipe.img_enc_bin)) {
+        NVGST_ERROR_MESSAGE ("fail to link img_conv_bin & img_enc_bin");
+        goto fail;
+    }
+    
+    // create ghost src pad for camera bin 
+    NVGST_INFO_MESSAGE_V("create ghost src pad for camera bin %d", index); 
+    srcpad = gst_element_get_static_pad (campipe.vid_enc_bin, "src");
+    if (!srcpad) {
+        NVGST_ERROR_MESSAGE_V ("can't get static src pad of camera bin %d", index);
+        goto fail;
+    }
+    gst_element_add_pad (campipe.cam_bin, gst_ghost_pad_new ("src", srcpad));
+    gst_object_unref (GST_OBJECT (srcpad));
+
+    return TRUE; 
+
+fail:
+    app->return_value = -1;
+    return FALSE;
+}
+
 // nvarguscamerasrc sensor-id=0 ! "video/x-raw(memory:NVMM),format=(string)NV12,width=(int)1920,height=(int)1080,framerate=(fraction)30/1" ! 
 // nvvidconv flip-method=0 left=0 top=0 right=1920 bottom=1080 ! "video/x-raw(memory:NVMM),format=(string)NV12,width=(int)1920,height=(int)1080,pixel-aspect-ratio=1/1" ! 
 // queue ! nvv4l2h264enc maxperf-enable=true bitrate=8000000 ! h264parse ! queue ! muxer.video_0 
@@ -1270,7 +1473,8 @@ static gboolean bus_callback (GstBus * bus, GstMessage * msg, gpointer data)
 
 // qtmux name=muxer ! filesink location="test_pair.mp4image" sync=false async=false
 
-static gboolean create_csi_capture_pipeline()
+
+static gboolean create_dual_capture_pipeline()
 {
     GstBus *bus = NULL;
     GstPad *srcpad = NULL;
@@ -1278,173 +1482,54 @@ static gboolean create_csi_capture_pipeline()
     gchar sink_x[64];
 
     // Create the pipeline 
-    app->cap.pipeline = gst_pipeline_new ("csi_capture_pipeline");;
-    if (!app->cap.pipeline) {
-        NVGST_ERROR_MESSAGE ("CSI capture pipeline creation failed");
+    NVGST_INFO_MESSAGE("create gstreamer pipeline");
+    app->gst.pipeline = gst_pipeline_new ("dual_capture_pipeline");;
+    if (!app->gst.pipeline) {
+        NVGST_ERROR_MESSAGE ("dual capture pipeline creation failed");
         goto fail;
     }
 
-    bus = gst_pipeline_get_bus (GST_PIPELINE (app->cap.pipeline));
-    gst_bus_set_sync_handler (bus, bus_sync_handler, app->cap.pipeline, NULL);
+    NVGST_INFO_MESSAGE("watch bus of pipeline");
+    bus = gst_pipeline_get_bus (GST_PIPELINE (app->gst.pipeline));
+    gst_bus_set_sync_handler (bus, bus_sync_handler, app->gst.pipeline, NULL);
     gst_bus_add_watch (bus, bus_callback, NULL);
     gst_object_unref (bus);
 
-    g_object_set (app->cap.pipeline, "message-forward", TRUE, NULL);
+    NVGST_INFO_MESSAGE("set message forward for pipeline");
+    g_object_set (app->gst.pipeline, "message-forward", TRUE, NULL);
 
     // Create the video file sink bin 
+    NVGST_INFO_MESSAGE("create video sink bin");
     if (!create_vid_sink_bin()) {
         NVGST_ERROR_MESSAGE ("video sink bin creation failed");
         goto fail;
     }
+    gst_bin_add(GST_BIN (app->gst.pipeline), app->gst.vid_sink_bin);
 
-    // Create two cameras bins 
+    // Create dual cameras bins 
     for (int index = 0; index < app->num_cams; index++) { 
-        CamPipe& campipe = app->cap.cams[index]; 
-
-        // Create csi capture chain elements 
-        if (!create_csi_cap_bin(index)) {
-            NVGST_ERROR_MESSAGE_V ("cap bin %d creation failed", index);
+        NVGST_INFO_MESSAGE_V ("create camera bin %d", index);
+        if (!create_csi_cam_bin(index)) {
+            NVGST_ERROR_MESSAGE ("camera bin creation failed");
             goto fail;
         }
+        gst_bin_add(GST_BIN (app->gst.pipeline), app->gst.cams[index].cam_bin);
 
-        // Create video encode chain elements 
-        if (!create_vid_enc_bin(index)) {
-            NVGST_ERROR_MESSAGE_V ("video encode bin %d creation failed", index);
+        // Manually link camera bin to video sink
+        NVGST_INFO_MESSAGE_V("link camera bin & video sink bin %d", index);
+        srcpad = gst_element_get_static_pad (app->gst.cams[index].cam_bin, "src");
+        if (!srcpad) {
+            NVGST_ERROR_MESSAGE_V ("fail to get src pad from camera bin %d", index);
             goto fail;
         }
-
-        // Create image encode chain elements 
-        if (!create_img_enc_bin(index)) {
-            NVGST_ERROR_MESSAGE_V ("image encode bin %d creation failed", index);
-            goto fail;
-        }
-
-        // Create video scaling elements 
-        if (!create_vid_conv_bin(index)) {
-            NVGST_ERROR_MESSAGE_V ("video conv bin % creation failed", index);
-            goto fail;
-        }
-
-       // Create image scaling elements 
-        if (!create_img_conv_bin(index)) {
-            NVGST_ERROR_MESSAGE_V ("image conv bin %d creation failed", index);
-            goto fail;
-        }
-
-        // Create capture tee for capture streams 
-        campipe.cap_tee = gst_element_factory_make (NVGST_PRIMARY_STREAM_SELECTOR, NULL);
-        if (!campipe.cap_tee) {
-            NVGST_ERROR_MESSAGE_V ("capture tee %d creation failed", index);
-            goto fail;
-        }
-
-        g_object_set (G_OBJECT (campipe.cap_tee), "name", "cam_t", NULL);
-        g_object_set (G_OBJECT (campipe.cap_tee), "mode", 2, NULL);
-
-        // Create encode queues 
-        campipe.venc_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
-        campipe.ienc_q = gst_element_factory_make (NVGST_PRIMARY_QUEUE, NULL);
-        if (!campipe.venc_q || !campipe.ienc_q) {
-            NVGST_ERROR_MESSAGE_V ("encode queue %d creation failed", index);
-            goto fail;
-        }
-
-        // Add elements to camera pipeline 
-        gst_bin_add_many (GST_BIN (app->cap.pipeline), campipe.cap_bin, campipe.cap_tee, 
-                campipe.venc_q, campipe.vid_conv_bin, campipe.vid_enc_bin, 
-                campipe.ienc_q, campipe.img_conv_bin, campipe.img_enc_bin, 
-                NULL);
-
-        // Manually link the Tee with video queue 
-        srcpad = gst_element_get_static_pad (campipe.cap_tee, "vid_src");
-        sinkpad = gst_element_get_static_pad (campipe.venc_q, "sink");
-        if (!sinkpad || !srcpad) {
-            NVGST_ERROR_MESSAGE ("fail to get pads from tee & venc_q");
+        g_snprintf (sink_x, sizeof (sink_x), "video_%d", index);
+        sinkpad = gst_element_get_static_pad (app->gst.vid_sink_bin, sink_x);
+        if (!sinkpad) {
+            NVGST_ERROR_MESSAGE_V ("fail to get %s pad from video sink bin %d", sink_x, index);
             goto fail;
         }
         if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
-            NVGST_ERROR_MESSAGE ("fail to link tee & venc_q");
-            goto fail;
-        }
-
-        // probe on venc pipeline 
-        app->venc_probe_id = gst_pad_add_probe (sinkpad, GST_PAD_PROBE_TYPE_BUFFER, venc_buf_prob, (void*)&app->cam_ids[index], NULL);
-        gst_object_unref (sinkpad);
-        gst_object_unref (srcpad);
-
-        // Manually link the video queue with video scaling 
-        srcpad = gst_element_get_static_pad (campipe.venc_q, "src");
-        sinkpad = gst_element_get_static_pad (campipe.vid_conv_bin, "sink");
-        if (!sinkpad || !srcpad) {
-            NVGST_ERROR_MESSAGE ("fail to get pads from video queue & video conv");
-            goto fail;
-        }
-        if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
-            NVGST_ERROR_MESSAGE ("fail to link video queue & video conv");
-            goto fail;
-        }
-        gst_object_unref (sinkpad);
-        gst_object_unref (srcpad);
-
-        // Manually link the Tee with image queue 
-        srcpad = gst_element_get_static_pad (campipe.cap_tee, "pre_src");
-        sinkpad = gst_element_get_static_pad (campipe.ienc_q, "sink");
-        if (!sinkpad || !srcpad) {
-            NVGST_ERROR_MESSAGE ("fail to get pads from tee & ienc_q");
-            goto fail;
-        }
-        if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
-            NVGST_ERROR_MESSAGE ("fail to link tee & ienc_q");
-            goto fail;
-        }
-        
-        // probe on ienc pipeline 
-        app->ienc_probe_id = gst_pad_add_probe (sinkpad, GST_PAD_PROBE_TYPE_BUFFER, ienc_buf_prob, (void*)&app->cam_ids[index], NULL);
-        gst_object_unref (sinkpad);
-        gst_object_unref (srcpad);
-
-        // Manually link the image queue with image scaling 
-        srcpad = gst_element_get_static_pad (campipe.ienc_q, "src");
-        sinkpad = gst_element_get_static_pad (campipe.img_conv_bin, "sink");
-        if (!sinkpad || !srcpad) {
-            NVGST_ERROR_MESSAGE ("fail to get pads from image queue & image conv\n");
-            goto fail;
-        }
-        if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
-            NVGST_ERROR_MESSAGE ("fail to link image queue & image conv\n");
-            goto fail;
-        }
-        gst_object_unref (sinkpad);
-        gst_object_unref (srcpad);
-
-        // link the capture bin with Tee 
-        if (!gst_element_link (campipe.cap_bin, campipe.cap_tee)) {
-            NVGST_ERROR_MESSAGE ("fail to link capture bin & tee\n");
-            goto fail;
-        }
-
-        // link the video scaling bin with encode bin 
-        if (!gst_element_link (campipe.vid_conv_bin, campipe.vid_enc_bin)) {
-            NVGST_ERROR_MESSAGE ("fail to link vid_conv_bin & vid_enc_bin\n");
-            goto fail;
-        }
-
-        // link the image scaling bin with encode bin 
-        if (!gst_element_link (campipe.img_conv_bin, campipe.img_enc_bin)) {
-            NVGST_ERROR_MESSAGE ("fail to link img_conv_bin & img_enc_bin");
-            goto fail;
-        }
-
-        // Manually link the video encode bin to video sink
-        g_snprintf (sink_x, sizeof (sink_x), "sink_%d", index);
-        srcpad = gst_element_get_static_pad (campipe.vid_enc_bin, "src");
-        sinkpad = gst_element_get_static_pad (app->cap.vid_sink_bin, sink_x);
-        if (!sinkpad || !srcpad) {
-            NVGST_ERROR_MESSAGE_V ("fail to get pads from venc & sink %d", index);
-            goto fail;
-        }
-        if (GST_PAD_LINK_OK != gst_pad_link (srcpad, sinkpad)) {
-            NVGST_ERROR_MESSAGE_V ("fail to link venc & sink %d", index);
+            NVGST_ERROR_MESSAGE_V ("fail to link camera bin & video sink bin %d", index);
             goto fail;
         }
         gst_object_unref (sinkpad);
@@ -1454,8 +1539,8 @@ static gboolean create_csi_capture_pipeline()
     return TRUE;
 
 fail:
-  app->return_value = -1;
-  return FALSE;
+    app->return_value = -1;
+    return FALSE;
 }
 
 // create capture pipeline 
@@ -1463,43 +1548,41 @@ fail:
 // the pipeline with updated parameters 
 static gboolean create_capture_pipeline()
 {
-  gboolean ret = TRUE;
+    // Check for capture parameters 
+    NVGST_INFO_MESSAGE("check params"); 
+    if (!check_capture_params ()) {
+        NVGST_ERROR_MESSAGE ("invalid params");
+        goto fail;
+    }
 
-  // Check for capture parameters 
-  if (!check_capture_params ()) {
-    NVGST_ERROR_MESSAGE ("Invalid capture parameters");
-    goto fail;
-  }
+    // Create pipeline for csi cameras 
+    NVGST_INFO_MESSAGE("create pipeline for dual cameras"); 
+    if (!create_dual_capture_pipeline ()) {
+        NVGST_ERROR_MESSAGE ("can't create pipeline");
+        goto fail;
+    }
 
-  // Create pipeline for csi cameras 
-  ret = create_csi_capture_pipeline ();
-  if (!ret) {
-    NVGST_ERROR_MESSAGE ("can't create capture pipeline\n");
-    goto fail;
-  }
+    // Capture pipeline created, now start capture 
+    NVGST_INFO_MESSAGE("start pipeline"); 
+    GST_INFO_OBJECT (app->gst.pipeline, "camera ready");
+    if (GST_STATE_CHANGE_FAILURE == gst_element_set_state (app->gst.pipeline, GST_STATE_PLAYING)) {
+        NVGST_CRITICAL_MESSAGE ("can't set pipeline to playing");
+        goto fail;
+    }
 
-  // Capture pipeline created, now start capture 
-  GST_INFO_OBJECT (app->cap.pipeline, "camera ready");
+    /* Dump Capture - Playing Pipeline into the dot file
+    * Set environment variable "export GST_DEBUG_DUMP_DOT_DIR=/tmp"
+    * Run nvgstcapture and 0.00.00.*-nvgstcapture-playing.dot file will be generated.
+    * Run "dot -Tpng 0.00.00.*-nvgstcapture-playing.dot > image.png"
+    * image.png will display the running capture pipeline.
+    */
+    GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS (GST_BIN(app->gst.pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "nvgstcapture-playing");
 
-  if (GST_STATE_CHANGE_FAILURE == gst_element_set_state (app->cap.pipeline, GST_STATE_PLAYING)) {
-    NVGST_CRITICAL_MESSAGE ("can't set camera to playing\n");
-    goto fail;
-  }
-
-  /* Dump Capture - Playing Pipeline into the dot file
-   * Set environment variable "export GST_DEBUG_DUMP_DOT_DIR=/tmp"
-   * Run nvgstcapture and 0.00.00.*-nvgstcapture-playing.dot
-   * file will be generated.
-   * Run "dot -Tpng 0.00.00.*-nvgstcapture-playing.dot > image.png"
-   * image.png will display the running capture pipeline.
-   */
-  GST_DEBUG_BIN_TO_DOT_FILE_WITH_TS (GST_BIN(app->cap.pipeline), GST_DEBUG_GRAPH_SHOW_ALL, "nvgstcapture-playing");
-
-  return ret;
+    return TRUE;
 
 fail:
-  app->return_value = -1;
-  return FALSE;
+    app->return_value = -1;
+    return FALSE;
 }
 
 // Destroy pipeline.
@@ -1508,8 +1591,8 @@ void destroy_capture_pipeline()
     GstPad *sinkpad = NULL;
 
     // stop the pipeline
-    if (!app->cap.pipeline) return;
-    if (GST_STATE_CHANGE_FAILURE == gst_element_set_state (app->cap.pipeline, GST_STATE_NULL)) {
+    if (!app->gst.pipeline) return;
+    if (GST_STATE_CHANGE_FAILURE == gst_element_set_state (app->gst.pipeline, GST_STATE_NULL)) {
         g_warning ("can't set camera pipeline to null\n");
     }
 
@@ -1520,7 +1603,7 @@ void destroy_capture_pipeline()
 
     // remove enc probe 
     for (int i = 0; i < app->num_cams; i++) {
-        CamPipe campipe = app->cap.cams[i]; 
+        CamPipe campipe = app->gst.cams[i]; 
         sinkpad = gst_element_get_static_pad (campipe.venc_q, "sink");
         gst_pad_remove_probe (sinkpad, app->venc_probe_id);
         gst_object_unref (sinkpad);
@@ -1529,7 +1612,7 @@ void destroy_capture_pipeline()
         gst_pad_remove_probe (sinkpad, app->ienc_probe_id);
         gst_object_unref (sinkpad);
     }
-    gst_object_unref (GST_OBJECT (app->cap.pipeline));
+    gst_object_unref (GST_OBJECT (app->gst.pipeline));
 }
 
 bool set_capture_params()
@@ -1541,7 +1624,7 @@ bool start_recording()
 {
     set_new_file_name();
     for (int i = 0; i < app->num_cams; i++) {
-        CamPipe& campipe = app->cap.cams[i]; 
+        CamPipe& campipe = app->gst.cams[i]; 
         g_signal_emit_by_name (G_OBJECT (campipe.cap_tee), "start-capture");
     }
     return true; 
@@ -1550,7 +1633,7 @@ bool start_recording()
 bool stop_recording()
 {
     for (int i = 0; i < app->num_cams; i++) {
-        CamPipe& campipe = app->cap.cams[i]; 
+        CamPipe& campipe = app->gst.cams[i]; 
         g_signal_emit_by_name(G_OBJECT(campipe.cap_tee), "stop-capture");
         gst_pad_send_event(gst_element_get_static_pad(campipe.venc_q, "sink"), gst_event_new_eos());
     }
@@ -1561,31 +1644,46 @@ int main (int argc, char *argv[])
 {
     app = &appctx;
     memset (app, 0, sizeof(AppCtx));
+    NVGST_INFO_MESSAGE("init params"); 
     capture_init_params(); 
 
+    NVGST_INFO_MESSAGE("setup interruption"); 
     _intr_setup ();
+
+    NVGST_INFO_MESSAGE("set timer for interruption"); 
     g_timeout_add (400, check_for_interrupt, NULL);
 
+    NVGST_INFO_MESSAGE("init gstreamer"); 
     gst_init (&argc, &argv);
     loop = g_main_loop_new (NULL, FALSE);
 
     // create the mjpeg server 
+    app->stream_server.reset(new mjpeg_server()); 
+    if (!app->stream_server) {
+        NVGST_WARNING_MESSAGE("failed to create stream server"); 
+    }
 
     // create and run the pipeline 
+    NVGST_INFO_MESSAGE("create pipeline"); 
     if (create_capture_pipeline ()) {
+        NVGST_INFO_MESSAGE("start gstreamer loop"); 
         g_main_loop_run (loop);
     } 
 
     // destroy the pipeline 
+    NVGST_INFO_MESSAGE("destroy pipeline"); 
     destroy_capture_pipeline ();
+
+    NVGST_INFO_MESSAGE("clean"); 
     g_main_loop_unref (loop);
 
     // clean 
-    g_mutex_clear (app->lock);
-    g_cond_clear (app->cond);
-    g_free (app->lock);
-    g_free (app->cond);
-    g_free (app->file_name);
+    // g_mutex_clear (app->lock);
+    // g_cond_clear (app->cond);
+    // g_free (app->lock);
+    // g_free (app->cond);
+    // g_free (app->file_name);
 
+    NVGST_INFO_MESSAGE("exit"); 
     return app->return_value; 
 }

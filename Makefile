@@ -45,7 +45,7 @@ PKGS := gstreamer-1.0 \
 	glib-2.0 x11 xext
 
 CC := g++
-CFLAGS += -fPIC -fpermissive 
+CFLAGS += -fPIC -fpermissive -D NVGST_LOG_LEVEL_DEBUG
 LIBS += -ldl 
 
 CFLAGS += `pkg-config --cflags $(PKGS)`
@@ -54,11 +54,11 @@ LIBS += `pkg-config --libs $(PKGS)`
 
 LDFLAGS = -Wl,--no-undefined -L$(LIB_INSTALL_DIR) -Wl,-rpath,$(LIB_INSTALL_DIR)
 
-OBJS := $(SRCS:.c=.o)
+OBJS := $(SRCS:.cpp=.o)
 
 all: $(APP)
 
-%.o: %.c
+%.o: %.cpp
 	@echo "Compiling: $<"
 	$(CC) -c $< $(CFLAGS) $(INCLUDES) -o $@
 
